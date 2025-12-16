@@ -253,4 +253,4 @@ https://github.com/user-attachments/assets/f165f409-5a74-4e19-a32c-fc98d92259e1
 
 ## 🙏 Acknowledgements
 We would like to thank [HunyuanWorld](https://github.com/Tencent-Hunyuan/HunyuanWorld-1.0), [HunyuanWorld-Mirror
-](https://github.com/Tencent-Hunyuan/HunyuanWorld-Mirror), [FlashWorld](https://github.com/imlixinyang/FlashWorld), [HunyuanVideo-1.5](https://github.com/Tencent-Hunyuan/HunyuanVideo-1.5), and [FastVideo](https://github.com/hao-ai-lab/FastVideo) for their great work.
+](https://github.com/Tencent-Hunyuan/HunyuanWorld-Mirror), [HunyuanVideo](https://github.com/Tencent-Hunyuan/HunyuanVideo-1.5), and [FastVideo](https://github.com/hao-ai-lab/FastVideo) for their great work.

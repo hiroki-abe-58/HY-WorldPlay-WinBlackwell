@@ -159,7 +159,7 @@ def camera_center_normalization(w2c):
     return np.linalg.inv(c2w_aligned)
 
 def generate_video(args):
-
+    assert ((args.video_length - 1) // 4 + 1) % 4 == 0, "number of latents must be divisible by 4"
     initialize_infer_state(args)
 
     task = 'i2v' if args.image_path else 't2v'

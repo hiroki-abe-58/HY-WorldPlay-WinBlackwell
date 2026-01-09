@@ -36,10 +36,10 @@
 https://github.com/user-attachments/assets/9fd12b40-41ab-4201-8667-8b333db1123d
 
 ## 🔥 News
-- January 6, 2026: 🚀 We release the training code for HunyuanVideo version, enabling the community to train and fine-tune their own world models!
-- January 6, 2026: 🎯 We open-source the WAN version inference code and model weights, providing a lightweight alternative for distributed inference!
-- January 6, 2026: ⚡ We update the HunyuanVideo inference code with an accelerated version for even faster inference speeds!
-- December 17, 2025: 👋 We present the [technical report](https://3d-models.hunyuan.tencent.com/world/world1_5/HYWorld_1.5_Tech_Report.pdf) and [research paper](https://arxiv.org/abs/2512.14614) of HY-World 1.5 (WorldPlay), please check out the details and spark some discussion!
+- January 6, 2026: 🚀 We release the training code for WorldPlay-8B model (based on HY Video), enabling the community to train and fine-tune their own world models!
+- January 6, 2026: 🎯 We open-source WorldPlay-5B model (based on WAN), a new lightweight model that fits into small-VRAM GPUs (but with compromised quality)!
+- January 3, 2026: ⚡ We update the inference code with quantization and engineering optimization for even faster inference speeds!
+- December 17, 2025: 👋 We present the [technical report](https://3d-models.hunyuan.tencent.com/world/world1_5/HYWorld_1.5_Tech_Report.pdf) (and [research paper](https://arxiv.org/abs/2512.14614)) of HY-World 1.5 (WorldPlay), please check out the details and spark some discussion!
 - December 17, 2025: 🤗 We release the first open-source, real-time interactive, and long-term geometric consistent world model, HY-World 1.5 (WorldPlay)!
 
 > Join our **[Wechat](#)** and **[Discord](https://discord.gg/dNBrdrGGMa)** group to discuss and find help from us.
@@ -210,9 +210,9 @@ Try our **online demo** without installation: https://3d.hunyuan.tencent.com/sce
 
 ## 🔑 Inference
 
-We provide two inference pipelines:
-1. **HunyuanVideo-based Pipeline** (recommended): Uses the full HunyuanVideo model with action control
-2. **WAN Pipeline** (lightweight): A streamlined pipeline with distributed inference support
+We provide two inference pipelines for WorldPlay:
+1. **HunyuanVideo-based Pipeline** (recommended): Better action control and long-term memory, with HunyuanVideo-8B as backbone
+2. **WAN Pipeline** (lightweight): Small VRAM but action control and long-term memory are compromised, with WAN-5B as backbone
 
 ### HunyuanVideo-based Inference
 
@@ -323,7 +323,7 @@ bash run.sh
 
 ### WAN Pipeline Inference
 
-For detailed information about the WAN pipeline (lightweight alternative with distributed inference support), please refer to [wan/README.md](wan/README.md).
+For detailed information about  WAN-based WorldPlay pipeline, please refer to [wan/README.md](wan/README.md).
 
 ## ⚙️Training
 
@@ -362,7 +362,9 @@ https://github.com/user-attachments/assets/531bf0ad-1fca-4d76-bb65-84701368926d
 https://github.com/user-attachments/assets/f165f409-5a74-4e19-a32c-fc98d92259e1
 
 ## 📝 TODO
-- [ ] Open-source training code
+- [x] Open-source training code
+- [x] Open-source quantized & accelerated inference
+- [x] Open-source Lite model
 
 ## 📚 Citation
 
@@ -379,13 +381,6 @@ https://github.com/user-attachments/assets/f165f409-5a74-4e19-a32c-fc98d92259e1
     author={Wenqiang Sun and Haiyu Zhang and Haoyuan Wang and Junta Wu and Zehan Wang and Zhenwei Wang and Yunhong Wang and Jun Zhang and Tengfei Wang and Chunchao Guo},
     year={2025},
     journal={arXiv preprint}
-}
-
-@inproceedings{wang2025compass,
-  title={WorldCompass: Reinforcement Learning for Long-Horizon World Models},
-  author={Zehan Wang and Tengfei Wang and Haiyu Zhang and Wenqiang Sun and Junta Wu and Haoyuan Wang and Zhenwei Wang and Hengshuang Zhao and Chunchao Guo and Zhou Zhao},
-  journal = {arXiv preprint},
-  year = {2025}
 }
 ```
 

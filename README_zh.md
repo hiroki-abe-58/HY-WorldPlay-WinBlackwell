@@ -32,10 +32,10 @@
 https://github.com/user-attachments/assets/19a8ef47-3d1a-4c29-a80f-500b342bfc80
 
 ## 🔥 新闻
-- 2026年1月6日: 🚀 我们开源了 HunyuanVideo 版本的训练代码，让社区能够训练和微调自己的世界模型！
-- 2026年1月6日: 🎯 我们开源了 WAN 版本模型的推理代码和权重，为分布式推理提供轻量级替代方案！
-- 2026年1月6日: ⚡ 我们更新了 HunyuanVideo 推理代码的加速版本，推理速度更快！
-- 2025年12月17日: 👋 我们发布了 HY-World 1.5 (WorldPlay) 的[技术报告](https://3d-models.hunyuan.tencent.com/world/world1_5/HYWorld_1.5_Tech_Report.pdf)和[研究论文](https://arxiv.org/abs/2512.14614)，欢迎查看详情并展开讨论！
+- 2026年1月6日: 🚀 我们开源了WorldPlay-8B模型（基于HunyuanVideo）的训练代码，让社区能够训练和微调自己的世界模型！
+- 2026年1月6日: 🎯 我们开源了WorldPlay-5B模型（基于WAN），部署需要显存更少！（但控制和记忆能力有退化）
+- 2026年1月3日: ⚡ 我们更新了推理代码的量化及加速版本，推理速度更快！
+- 2025年12月17日: 👋 我们发布了 HY-World 1.5 (WorldPlay) 的[技术报告](https://3d-models.hunyuan.tencent.com/world/world1_5/HYWorld_1.5_Tech_Report.pdf)（和[研究论文](https://arxiv.org/abs/2512.14614)），欢迎查看详情并展开讨论！
 - 2025年12月17日: 🤗 我们发布了首个开源、实时交互、长期几何一致性的世界模型 HY-World 1.5 (WorldPlay)！
 
 > 加入我们的 **[微信群](#)** 和 **[Discord](https://discord.gg/dNBrdrGGMa)** 群组进行讨论。
@@ -123,14 +123,19 @@ https://github.com/user-attachments/assets/643a33a4-b677-4eff-ad1d-32205c594274
 |------|------|------|
 | HY-World1.5-Bidirectional-480P-I2V | 双向注意力模型，具有重构上下文记忆机制 | [下载地址](https://huggingface.co/tencent/HY-WorldPlay/tree/main/bidirectional_model) |
 | HY-World1.5-Autoregressive-480P-I2V | 自回归模型，具有重构上下文记忆机制和单向的注意力机制以实现长期几何一致性 | [下载地址](https://huggingface.co/tencent/HY-WorldPlay/tree/main/ar_model) |
+| HY-World1.5-Autoregressive-480P-I2V-rl | 经过强化学习的自回归模型. | To be released |
 | HY-World1.5-Autoregressive-480P-I2V-distill | 自回归模型的蒸馏版，针对推理优化（4步） | [下载地址](https://huggingface.co/tencent/HY-WorldPlay/tree/main/ar_distilled_action_model) |
+| HY-World1.5-Autoregressive-480P-I2V-rl-distill |  经过强化学习的自回归模型的蒸馏版. | To be released | 
+
+<p align="center">
+  <img src="assets/model_zoo.png">
+</p>  
 
 ## 🔑 推理
 
 我们提供两种推理管道:
-1. **基于 HunyuanVideo 的管道** (推荐): 使用完整的 HunyuanVideo 模型并支持动作控制
-2. **WAN 管道** (轻量级): 支持分布式推理的精简管道
-
+1. **基于 HunyuanVideo 的管道** (推荐): 基于HunyuanVideo模型，并支持更好的动作控制和更一致的记忆能力
+2. **WAN 管道** (轻量级): 基于WAN模型，需要显存更少，但动作控制和记忆能力退化
 ### 基于 HunyuanVideo 的推理
 
 #### 配置模型路径
@@ -240,7 +245,7 @@ bash run.sh
 
 ### WAN 管道推理
 
-关于 WAN 管道（支持分布式推理的轻量级替代方案）的详细信息，请参阅 [wan/README_zh.md](wan/README_zh.md)。
+关于 WAN 管道（轻量级替代模型）的详细信息，请参阅 [wan/README_zh.md](wan/README_zh.md)。
 
 ---
 
@@ -281,7 +286,9 @@ https://github.com/user-attachments/assets/f165f409-5a74-4e19-a32c-fc98d92259e1
 
 ## 📝 待办事项
 
-- [ ] 开源训练代码
+- [x] 开源训练代码
+- [x] 开源量化及工程优化的推理代码
+- [x] 开源轻量级模型
 
 ## 📚 引用
 
@@ -300,15 +307,8 @@ https://github.com/user-attachments/assets/f165f409-5a74-4e19-a32c-fc98d92259e1
     journal={arXiv preprint}
 }
 
-@inproceedings{wang2025compass,
-  title={WorldCompass: Reinforcement Learning for Long-Horizon World Models},
-  author={Zehan Wang and Tengfei Wang and Haiyu Zhang and Wenqiang Sun and Junta Wu and Haoyuan Wang and Zhenwei Wang and Hengshuang Zhao and Chunchao Guo and Zhou Zhao},
-  journal = {arXiv preprint},
-  year = {2025}
-}
 ```
 
 
 ## 🙏 致谢
-我们要感谢 [HunyuanWorld](https://github.com/Tencent-Hunyuan/HunyuanWorld-1.0)、[HunyuanWorld-Mirror
-](https://github.com/Tencent-Hunyuan/HunyuanWorld-Mirror)、[HunyuanVideo](https://github.com/Tencent-Hunyuan/HunyuanVideo-1.5) 和 [FastVideo](https://github.com/hao-ai-lab/FastVideo) 的出色工作。
+我们要感谢 [HunyuanWorld](https://github.com/Tencent-Hunyuan/HunyuanWorld-1.0)、[HunyuanVideo](https://github.com/Tencent-Hunyuan/HunyuanVideo-1.5) 和 [FastVideo](https://github.com/hao-ai-lab/FastVideo) 的出色工作。

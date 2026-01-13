@@ -110,9 +110,13 @@ While **HY-World 1.0** is capable of generating immersive 3D worlds, it relies o
 ## 📜 System Requirements
 
 - **GPU**: NVIDIA GPU with CUDA support
-- **Minimum GPU Memory**: 14 GB (with model offloading enabled)
-  
-  > **Note:** The memory requirements above are measured with model offloading enabled. If your GPU has sufficient memory, you may disable offloading for improved inference speed.
+- **GPU Memory cost**:
+  - Inference with AR distilled models (based on HunyuanVideo1.5 with 125 frames):
+    - sp = 8: memory=28G
+    - sp = 4: memory=34G
+    - sp = 1: memory=72G
+  - Training (based on HunyuanVideo1.5 with 125 frames):
+    - sp = 8: memory=60G
 
 
 ## 🛠️ Dependencies and Installation
@@ -355,11 +359,11 @@ HY-World 1.5 surpasses existing methods across various quantitative metrics, inc
 
 ## 🎬 More Examples
 
-https://github.com/user-attachments/assets/6aac8ad7-3c64-4342-887f-53b7100452ed
+https://github.com/user-attachments/assets/51fcb28c-bd6e-44e5-adac-e3c6660f24f7
 
-https://github.com/user-attachments/assets/531bf0ad-1fca-4d76-bb65-84701368926d
+https://github.com/user-attachments/assets/b9060cd1-a442-4d67-9f16-daa7a2e6f2c8
 
-https://github.com/user-attachments/assets/f165f409-5a74-4e19-a32c-fc98d92259e1
+https://github.com/user-attachments/assets/b883a748-cc77-480f-b6a0-e94b6ce9efea
 
 ## 📝 TODO
 - [x] Open-source training code

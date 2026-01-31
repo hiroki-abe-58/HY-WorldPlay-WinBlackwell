@@ -1,208 +1,280 @@
+<p align="right">
+  <strong>Language / 言語:</strong>
+  <a href="README.md"><img src="https://img.shields.io/badge/日本語-0078D6?style=flat-square" alt="日本語"></a>
+  <a href="README_en.md"><img src="https://img.shields.io/badge/English-gray?style=flat-square" alt="English"></a>
+</p>
+
 # HY-WorldPlay-WinBlackwell
 
-[![Windows](https://img.shields.io/badge/Windows-10%2F11-blue)](https://www.microsoft.com/windows)
-[![CUDA](https://img.shields.io/badge/CUDA-13.0-green)](https://developer.nvidia.com/cuda-toolkit)
-[![Python](https://img.shields.io/badge/Python-3.12-yellow)](https://www.python.org/)
-[![Blackwell](https://img.shields.io/badge/GPU-Blackwell%20(sm__120)-red)](https://www.nvidia.com/)
+**Windows ネイティブ + Blackwell GPU 対応フォーク**
 
-A Windows Native + NVIDIA Blackwell GPU (RTX 6000 Blackwell) compatible fork of [HY-WorldPlay](https://github.com/Tencent-Hunyuan/HY-WorldPlay).
+[![Windows](https://img.shields.io/badge/Windows-10%2F11-0078D6?logo=windows)](https://www.microsoft.com/windows)
+[![CUDA](https://img.shields.io/badge/CUDA-13.0-76B900?logo=nvidia)](https://developer.nvidia.com/cuda-toolkit)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Gradio](https://img.shields.io/badge/Gradio-WebUI-FF7C00?logo=gradio)](https://gradio.app/)
 
-## Overview
+[Tencent HY-WorldPlay](https://github.com/Tencent-Hunyuan/HY-WorldPlay) を **Windows ネイティブ環境** と **NVIDIA Blackwell アーキテクチャ GPU** (RTX 6000 Blackwell 等) で動作させるためのフォークです。
 
-This fork adapts the official HY-WorldPlay (HY-World 1.5) for:
-- **Windows 10/11** native execution (no WSL required)
-- **NVIDIA Blackwell architecture** GPUs (sm_120, e.g., RTX 6000 Blackwell)
-- **Single-GPU inference** optimization
-- **Gradio WebUI** for easy interaction
+---
 
-## Key Changes from Official Version
+## このフォークのメリット
 
-| Feature | Official | This Fork |
-|---------|----------|-----------|
-| OS | Linux | Windows 10/11 |
-| GPU Architecture | sm_90 (Hopper) | sm_120 (Blackwell) |
-| flash-attn | Required | Optional (auto-fallback to PyTorch SDPA) |
-| Distributed | torchrun (multi-GPU) | Single-GPU optimized |
-| Environment | conda | Python venv |
-| Launch | Command line | Double-click batch file |
-| UI | None | Gradio WebUI |
+### 1. WSL不要 - 完全Windows ネイティブ動作
 
-## Requirements
+公式版は Linux 専用ですが、このフォークは **WSL (Windows Subsystem for Linux) なしで Windows 上で直接動作** します。
 
-- Windows 10/11
-- NVIDIA Blackwell GPU (RTX 6000 Blackwell, etc.)
-- Python 3.12
-- PyTorch Nightly with CUDA 13.0 (cu130)
-- ~72GB VRAM for single-GPU inference (125 frames)
+- パス変換の問題なし
+- ファイルシステムのオーバーヘッドなし
+- Windows ネイティブツールとの完全な互換性
 
-## Quick Start
+### 2. 最新 Blackwell GPU (sm_120) 対応
 
-### 1. Create Virtual Environment
+NVIDIA の最新アーキテクチャ **Blackwell (sm_120)** に完全対応。
+
+- RTX 6000 Blackwell (96GB VRAM)
+- PyTorch Nightly cu130 で最新GPU機能を活用
+- 大容量 VRAM を活かしたシングルGPU推論
+
+### 3. flash-attn 不要 - 自動フォールバック
+
+Windows では `flash-attn` のビルドが困難ですが、このフォークは **PyTorch ネイティブの Scaled Dot Product Attention (SDPA) に自動フォールバック** します。
+
+- 手動でのビルド作業不要
+- 品質は同等を維持
+- エラーなく即座に動作開始
+
+### 4. 直感的な Gradio WebUI
+
+公式版はコマンドラインのみですが、このフォークは **ブラウザベースの WebUI** を提供。
+
+- 画像アップロード
+- プロンプト入力
+- カメラ軌道設定
+- モデル選択
+- ワンクリック生成
+
+### 5. ダブルクリック起動
+
+`run-wp.bat` をダブルクリックするだけで:
+
+- 仮想環境の自動有効化
+- 環境変数の自動設定
+- 空きポートの自動検出
+- ブラウザの自動起動
+
+---
+
+## 技術的な違い（詳細）
+
+| 項目 | 公式版 | このフォーク |
+|------|--------|-------------|
+| **対応OS** | Linux のみ | Windows 10/11 ネイティブ |
+| **GPU アーキテクチャ** | sm_90 (Hopper) | sm_120 (Blackwell) |
+| **flash-attn** | 必須（ビルド必要） | 不要（自動フォールバック） |
+| **分散処理** | torchrun (マルチGPU) | シングルGPU最適化 |
+| **環境構築** | conda | Python venv |
+| **起動方法** | コマンドライン | ダブルクリック / WebUI |
+| **ユーザーインターフェース** | なし | Gradio WebUI |
+| **パス処理** | POSIX パス | Windows パス対応 |
+| **フォント** | Linux フォント | Windows フォント |
+
+### コード修正箇所
+
+<details>
+<summary>クリックして展開</summary>
+
+#### 1. `hyvideo/generate.py`
+- `WORLD_SIZE` / `LOCAL_RANK` のデフォルト値設定（シングルGPU対応）
+- Windows フォントパスへの対応 (`C:/Windows/Fonts/`)
+
+#### 2. `hyvideo/commons/parallel_states.py`
+- シングルGPU時の `init_device_mesh` スキップ処理
+- `world_size == 1` の判定追加
+
+#### 3. `hyvideo/utils/flash_attn_no_pad.py`
+- `flash_attn` インポートの try-except 処理
+- PyTorch SDPA へのフォールバック実装
+
+#### 4. `hyvideo/utils/communications.py`
+- 分散通信関数のガード処理追加
+- 非初期化時のパススルー
+
+#### 5. `download_models.py`
+- Windows 一時ディレクトリの使用 (`tempfile.gettempdir()`)
+
+#### 6. `app.py` (新規追加)
+- Gradio WebUI の実装
+- ポーズ文字列からの自動フレーム数計算
+- 長時間生成のタイムアウト対策
+
+</details>
+
+---
+
+## 動作環境
+
+| 項目 | 要件 |
+|------|------|
+| OS | Windows 10 / 11 |
+| GPU | NVIDIA Blackwell アーキテクチャ (RTX 6000 Blackwell 等) |
+| VRAM | 72GB 以上（シングルGPU推論時） |
+| Python | 3.12 |
+| PyTorch | Nightly (cu130) |
+
+---
+
+## クイックスタート
+
+### Step 1: リポジトリのクローン
 
 ```powershell
-cd C:\HYWorldPlay
+git clone https://github.com/hiroki-abe-58/HY-WorldPlay-WinBlackwell.git
+cd HY-WorldPlay-WinBlackwell
+```
+
+### Step 2: 仮想環境のセットアップ
+
+```powershell
 python -m venv venv
 .\venv\Scripts\activate
 ```
 
-### 2. Install Dependencies
+### Step 3: 依存関係のインストール
 
 ```powershell
+# PyTorch Nightly (cu130)
 pip install torch torchvision torchaudio --pre --index-url https://download.pytorch.org/whl/nightly/cu130
+
+# その他の依存関係
 pip install -r requirements.txt
 pip install gradio loguru
 ```
 
-### 3. Download Models
-
-**Option A: Using download-models.bat**
+### Step 4: モデルのダウンロード
 
 ```powershell
-# Set HuggingFace token first
-$env:HF_TOKEN = "your_hf_token"
+# HuggingFace トークンを設定
+$env:HF_TOKEN = "your_huggingface_token"
+
+# ダウンロードスクリプトを実行
 .\download-models.bat
 ```
 
-**Option B: Using huggingface-cli**
+> **注意:** Vision Encoder は [FLUX.1-Redux-dev](https://huggingface.co/black-forest-labs/FLUX.1-Redux-dev) へのアクセス承認が必要です。
+
+### Step 5: 起動
 
 ```powershell
-# HY-WorldPlay Action Models
-huggingface-cli download tencent/HY-WorldPlay --local-dir ckpts\HY-WorldPlay
+# 方法A: バッチファイル（推奨）
+.\run-wp.bat
 
-# HunyuanVideo-1.5 Base Model
-huggingface-cli download tencent/HunyuanVideo-1.5 --include "vae/*" "scheduler/*" "transformer/480p_i2v/*" --local-dir ckpts\HunyuanVideo-1.5
-
-# Text Encoders
-huggingface-cli download Qwen/Qwen2.5-VL-7B-Instruct --local-dir ckpts\HunyuanVideo-1.5\text_encoder\llm
-huggingface-cli download google/byt5-small --local-dir ckpts\HunyuanVideo-1.5\text_encoder\byt5-small
-
-# Vision Encoder (requires HF token with FLUX access)
-huggingface-cli download black-forest-labs/FLUX.1-Redux-dev --local-dir ckpts\HunyuanVideo-1.5\vision_encoder\siglip
-```
-
-**Note:** Vision encoder requires access approval at [FLUX.1-Redux-dev](https://huggingface.co/black-forest-labs/FLUX.1-Redux-dev).
-
-### 4. Launch
-
-**Option A: Double-click (Recommended)**
-
-Double-click `run-wp.bat`
-
-**Option B: Command line**
-
-```powershell
+# 方法B: 直接起動
 .\venv\Scripts\activate
-$env:MODEL_BASE = "C:\HYWorldPlay\ckpts"
-$env:PYTORCH_CUDA_ALLOC_CONF = "expandable_segments:True"
 python app.py --port 7860
 ```
 
-### 5. Open Browser
+### Step 6: ブラウザでアクセス
 
-Navigate to http://localhost:7860
+http://localhost:7860
 
-## Model Directory Structure
+---
+
+## カメラ操作
+
+WASD スタイルのポーズ文字列でカメラを制御できます。
+
+| アクション | キー | 説明 |
+|-----------|------|------|
+| 前進 | `w` | カメラを前方に移動 |
+| 後退 | `s` | カメラを後方に移動 |
+| 左移動 | `a` | カメラを左にストレイフ |
+| 右移動 | `d` | カメラを右にストレイフ |
+| 上を向く | `up` | カメラを上にピッチ |
+| 下を向く | `down` | カメラを下にピッチ |
+| 左を向く | `left` | カメラを左にヨー |
+| 右を向く | `right` | カメラを右にヨー |
+
+**形式:** `アクション-持続時間` （例: `w-31` = 31 latent 分前進）
+
+**例:**
+- `w-31` - 前進（125フレーム生成）
+- `w-15,d-16` - 前進してから右移動
+- `a-10,w-5,right-16` - 複雑な軌道
+
+---
+
+## モデル構成
 
 ```
-C:\HYWorldPlay\
-├── ckpts\
-│   ├── HY-WorldPlay\
-│   │   ├── ar_model\
-│   │   │   └── diffusion_pytorch_model.safetensors
-│   │   ├── ar_distilled_action_model\
-│   │   │   └── diffusion_pytorch_model.safetensors
-│   │   └── bidirectional_model\
-│   │       └── diffusion_pytorch_model.safetensors
-│   └── HunyuanVideo-1.5\
-│       ├── vae\
-│       ├── scheduler\
-│       ├── transformer\
-│       │   └── 480p_i2v\
-│       ├── text_encoder\
-│       │   ├── llm\ (Qwen2.5-VL-7B-Instruct)
-│       │   ├── byt5-small\
-│       │   └── Glyph-SDXL-v2\ (from ModelScope)
-│       └── vision_encoder\
-│           └── siglip\ (from FLUX.1-Redux-dev)
-├── app.py              # Gradio WebUI
-├── run-wp.bat          # Launch script
-└── ...
+ckpts/
+├── HY-WorldPlay/
+│   ├── ar_model/                      # AR モデル（50ステップ）
+│   ├── ar_distilled_action_model/     # AR 蒸留モデル（4ステップ、高速）
+│   └── bidirectional_model/           # 双方向モデル
+└── HunyuanVideo-1.5/
+    ├── vae/                           # VAE
+    ├── scheduler/                     # スケジューラ
+    ├── transformer/480p_i2v/          # Transformer
+    ├── text_encoder/
+    │   ├── llm/                       # Qwen2.5-VL-7B-Instruct
+    │   ├── byt5-small/                # ByT5
+    │   └── Glyph-SDXL-v2/             # Glyph エンコーダ
+    └── vision_encoder/siglip/         # SigLIP Vision Encoder
 ```
 
-## Camera Control
+---
 
-Use pose strings to control camera movement:
+## トラブルシューティング
 
-| Action | Key | Description |
-|--------|-----|-------------|
-| Forward | `w` | Move camera forward |
-| Backward | `s` | Move camera backward |
-| Left | `a` | Strafe left |
-| Right | `d` | Strafe right |
-| Look Up | `up` | Pitch camera up |
-| Look Down | `down` | Pitch camera down |
-| Turn Left | `left` | Yaw camera left |
-| Turn Right | `right` | Yaw camera right |
+<details>
+<summary><strong>"No module named 'flash_attn'" エラー</strong></summary>
 
-**Format:** `action-duration` (e.g., `w-31` = forward for 31 latents)
+**想定内の動作です。** 自動的に PyTorch SDPA にフォールバックするため、無視して問題ありません。
 
-**Examples:**
-- `w-31` - Move forward (generates 125 frames)
-- `w-15,d-16` - Forward then right
-- `a-10,w-5,right-16` - Complex trajectory
+</details>
 
-## Troubleshooting
+<details>
+<summary><strong>CUDA out of memory</strong></summary>
 
-### "No module named 'flash_attn'"
+- WebUI で「CPU Offloading」を有効化
+- 動画の長さを短く設定
 
-This is expected on Windows. The code automatically falls back to PyTorch's native `scaled_dot_product_attention`.
+</details>
 
-### CUDA out of memory
-
-- Enable `--offloading true` in the UI
-- Reduce video length
-
-### Slow download
+<details>
+<summary><strong>ダウンロードが遅い</strong></summary>
 
 ```powershell
 pip install "huggingface_hub[hf_xet]"
 ```
 
-### Port in use
+</details>
 
-`run-wp.bat` automatically finds an available port between 7860-7900.
+<details>
+<summary><strong>ポートが使用中</strong></summary>
 
-## Technical Notes
+`run-wp.bat` は自動的に 7860〜7900 の範囲で空きポートを探します。
 
-### flash-attn Fallback
-
-Since `flash-attn` doesn't compile on Windows, this fork implements automatic fallback to PyTorch's native SDPA (Scaled Dot Product Attention). Quality is equivalent, with slightly reduced speed.
-
-### Single-GPU Optimization
-
-The distributed processing code (`torchrun`, `init_device_mesh`) has been adapted to work with single-GPU setups by:
-- Setting `WORLD_SIZE=1` and `LOCAL_RANK=0` by default
-- Skipping device mesh initialization for single GPU
-- Adding guards to distributed communication functions
-
-### Windows Path Handling
-
-- Font paths adapted for Windows (`C:/Windows/Fonts/`)
-- Model paths use Windows-compatible separators
-- Temporary directories use `tempfile.gettempdir()`
-
-## License
-
-This project is licensed under the [Tencent Hunyuan Community License](https://github.com/Tencent-Hunyuan/HunyuanVideo-1.5/blob/main/LICENSE).
-
-## Acknowledgements
-
-- [Tencent-Hunyuan/HY-WorldPlay](https://github.com/Tencent-Hunyuan/HY-WorldPlay) - Original repository
-- [Tencent-Hunyuan/HunyuanVideo-1.5](https://github.com/Tencent-Hunyuan/HunyuanVideo-1.5) - Base video model
-- [Gradio](https://gradio.app/) - WebUI framework
+</details>
 
 ---
 
-## Japanese / 日本語
+## 謝辞
 
-詳細な日本語ドキュメントは [README_ja.md](README_ja.md) を参照してください。
+- [Tencent-Hunyuan/HY-WorldPlay](https://github.com/Tencent-Hunyuan/HY-WorldPlay) - オリジナルリポジトリ
+- [Tencent-Hunyuan/HunyuanVideo-1.5](https://github.com/Tencent-Hunyuan/HunyuanVideo-1.5) - ベース動画モデル
+- [Gradio](https://gradio.app/) - WebUI フレームワーク
+
+---
+
+## ライセンス
+
+[Tencent Hunyuan Community License](https://github.com/Tencent-Hunyuan/HunyuanVideo-1.5/blob/main/LICENSE)
+
+---
+
+## 関連リンク
+
+- [English README](README_en.md)
+- [オリジナル HY-WorldPlay](https://github.com/Tencent-Hunyuan/HY-WorldPlay)
+- [HunyuanVideo 1.5](https://github.com/Tencent-Hunyuan/HunyuanVideo-1.5)

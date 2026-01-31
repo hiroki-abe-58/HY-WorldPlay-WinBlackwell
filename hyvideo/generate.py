@@ -35,8 +35,16 @@ from hyvideo.commons.parallel_states import initialize_parallel_state
 from hyvideo.commons.infer_state import initialize_infer_state
 from hyvideo.generate_custom_trajectory import generate_camera_trajectory_local
 
-parallel_dims = initialize_parallel_state(sp=int(os.environ.get("WORLD_SIZE", "1")))
-torch.cuda.set_device(int(os.environ.get("LOCAL_RANK", "0")))
+# Windows/Single GPU compatibility: default to single GPU mode
+world_size = int(os.environ.get("WORLD_SIZE", "1"))
+local_rank = int(os.environ.get("LOCAL_RANK", "0"))
+
+# Only set device if CUDA is available
+if torch.cuda.is_available():
+    torch.cuda.set_device(local_rank)
+
+# Initialize parallel state with single GPU defaults
+parallel_dims = initialize_parallel_state(sp=world_size)
 
 mapping = {
     (0, 0, 0, 0): 0,
@@ -446,16 +454,32 @@ def create_wasd_keyboard(actions, key_size=70, key_spacing=6, corner_radius=14):
     font_size = 28
 
     try:
-        font = ImageFont.truetype(
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size
-        )
-    except (IOError, OSError):
-        try:
-            font = ImageFont.truetype(
-                "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf", font_size
-            )
-        except (IOError, OSError):
+        # Try Windows fonts first
+        import platform
+        if platform.system() == "Windows":
+            font_paths = [
+                "C:/Windows/Fonts/arial.ttf",
+                "C:/Windows/Fonts/segoeui.ttf",
+                "C:/Windows/Fonts/calibri.ttf",
+            ]
+        else:
+            font_paths = [
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
+            ]
+        
+        font = None
+        for font_path in font_paths:
+            try:
+                font = ImageFont.truetype(font_path, font_size)
+                break
+            except (IOError, OSError):
+                continue
+        
+        if font is None:
             font = ImageFont.load_default()
+    except Exception:
+        font = ImageFont.load_default()
 
     def draw_key(x, y, label, is_active):
         bg_color = bg_active if is_active else bg_normal

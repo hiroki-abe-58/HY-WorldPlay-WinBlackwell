@@ -15,37 +15,89 @@
 # See the License for the specific language governing permissions and limitations under the License.
 
 import torch
+import torch.nn.functional as F
 from einops import rearrange
-from torch.nn.attention.flex_attention import flex_attention, create_block_mask, BlockMask
 
-# compile first
-flex_attention = torch.compile(
-    flex_attention, dynamic=False, mode="max-autotune")
+# Windows/Blackwell compatibility: flash_attn may not be available
+try:
+    from flash_attn import flash_attn_varlen_qkvpacked_func
+    from flash_attn.bert_padding import pad_input, unpad_input
+    FLASH_ATTN_AVAILABLE = True
+except ImportError:
+    FLASH_ATTN_AVAILABLE = False
+    flash_attn_varlen_qkvpacked_func = None
+    pad_input = None
+    unpad_input = None
+
+# flex_attention may not compile on Windows
+try:
+    from torch.nn.attention.flex_attention import flex_attention, create_block_mask, BlockMask
+    flex_attention = torch.compile(flex_attention, dynamic=False, mode="max-autotune")
+    FLEX_ATTN_AVAILABLE = True
+except Exception:
+    FLEX_ATTN_AVAILABLE = False
+    flex_attention = None
+    create_block_mask = None
+    BlockMask = None
+
+
+def _torch_attention_fallback(q, k, v, attn_mask=None, dropout_p=0.0, causal=False):
+    """
+    PyTorch native scaled_dot_product_attention fallback for Windows.
+    """
+    # q, k, v: [B, S, H, D] -> [B, H, S, D] for SDPA
+    query = q.transpose(1, 2)
+    key = k.transpose(1, 2)
+    value = v.transpose(1, 2)
+    
+    out = F.scaled_dot_product_attention(
+        query, key, value,
+        attn_mask=attn_mask,
+        dropout_p=dropout_p,
+        is_causal=causal,
+    )
+    
+    # [B, H, S, D] -> [B, S, H, D]
+    out = out.transpose(1, 2)
+    return out
+
 
 def prepare_blockwise_causal_attn_mask(
             device: torch.device | str, num_frames: int = 21,
             frame_seqlen: int = 880, causal_mask=None
-    ) -> BlockMask:
+    ):
         """
         we will divide the token sequence into the following format
         [1 latent frame] [1 latent frame] ... [1 latent frame]
         We use flexattention to construct the attention mask
         """
+        if not FLEX_ATTN_AVAILABLE:
+            return None
 
         total_length = num_frames * frame_seqlen
 
         def attention_mask(b, h, q_idx, kv_idx):
             return causal_mask[q_idx, kv_idx]
 
+
 # add new function for computing causal attention with flex attention
 def flex_attn_no_pad(
     qkv, key_padding_mask, causal=False, dropout_p=0.0, softmax_scale=None, deterministic=False
 ):
-    from flash_attn import flash_attn_varlen_qkvpacked_func
-    from flash_attn.bert_padding import pad_input, unpad_input
-    batch_size = qkv.shape[0]    # qkv shape: [B, total_length, 3, num_head, D]
+    batch_size = qkv.shape[0]
     seqlen = qkv.shape[1]
     nheads = qkv.shape[-2]
+    
+    # Fallback to PyTorch native attention if flash_attn is not available
+    if not FLASH_ATTN_AVAILABLE or not FLEX_ATTN_AVAILABLE:
+        q, k, v = qkv.unbind(dim=2)
+        attn_mask = None
+        if key_padding_mask is not None:
+            mask = key_padding_mask.unsqueeze(1).unsqueeze(2)
+            attn_mask = torch.where(mask, 0.0, float('-inf')).to(q.dtype)
+        output = _torch_attention_fallback(q, k, v, attn_mask=attn_mask, dropout_p=dropout_p, causal=causal)
+        return output
+    
     x = rearrange(qkv, "b s three h d -> b s (three h d)")
     x_unpad, indices, cu_seqlens, max_s, used_seqlens_in_batch = unpad_input(
         x, key_padding_mask
@@ -100,11 +152,23 @@ def flex_attn_no_pad(
 def flash_attn_no_pad(
     qkv, key_padding_mask, causal=False, dropout_p=0.0, softmax_scale=None, deterministic=False
 ):
-    from flash_attn import flash_attn_varlen_qkvpacked_func
-    from flash_attn.bert_padding import pad_input, unpad_input
+    """
+    Compute attention with flash_attn or fallback to PyTorch SDPA.
+    """
     batch_size = qkv.shape[0]
     seqlen = qkv.shape[1]
     nheads = qkv.shape[-2]
+    
+    # Fallback to PyTorch native attention if flash_attn is not available
+    if not FLASH_ATTN_AVAILABLE:
+        q, k, v = qkv.unbind(dim=2)
+        attn_mask = None
+        if key_padding_mask is not None:
+            mask = key_padding_mask.unsqueeze(1).unsqueeze(2)
+            attn_mask = torch.where(mask, 0.0, float('-inf')).to(q.dtype)
+        output = _torch_attention_fallback(q, k, v, attn_mask=attn_mask, dropout_p=dropout_p, causal=causal)
+        return output
+    
     x = rearrange(qkv, "b s three h d -> b s (three h d)")
     x_unpad, indices, cu_seqlens, max_s, used_seqlens_in_batch = unpad_input(
         x, key_padding_mask
@@ -133,14 +197,35 @@ def flash_attn_no_pad(
 def flash_attn_no_pad_v3(
     qkv, key_padding_mask, causal=False, dropout_p=0.0, softmax_scale=None, deterministic=False
 ):
-    from flash_attn import flash_attn_varlen_qkvpacked_func
-    from flash_attn.bert_padding import pad_input, unpad_input
-    from flash_attn_interface import flash_attn_varlen_func as flash_attn_varlen_func_v3
+    """
+    FlashAttention V3 variant with fallback to PyTorch SDPA.
+    """
+    batch_size, seqlen, _, nheads, head_dim = qkv.shape
+    
+    # Fallback to PyTorch native attention if flash_attn is not available
+    if not FLASH_ATTN_AVAILABLE:
+        q, k, v = qkv.unbind(dim=2)
+        attn_mask = None
+        if key_padding_mask is not None:
+            mask = key_padding_mask.unsqueeze(1).unsqueeze(2)
+            attn_mask = torch.where(mask, 0.0, float('-inf')).to(q.dtype)
+        output = _torch_attention_fallback(q, k, v, attn_mask=attn_mask, dropout_p=dropout_p, causal=causal)
+        return output
+    
+    try:
+        from flash_attn_interface import flash_attn_varlen_func as flash_attn_varlen_func_v3
+    except ImportError:
+        q, k, v = qkv.unbind(dim=2)
+        attn_mask = None
+        if key_padding_mask is not None:
+            mask = key_padding_mask.unsqueeze(1).unsqueeze(2)
+            attn_mask = torch.where(mask, 0.0, float('-inf')).to(q.dtype)
+        output = _torch_attention_fallback(q, k, v, attn_mask=attn_mask, dropout_p=dropout_p, causal=causal)
+        return output
 
     if flash_attn_varlen_func_v3 is None:
         raise ImportError("FlashAttention V3 backend not available")
     
-    batch_size, seqlen, _, nheads, head_dim = qkv.shape
     query, key, value = qkv.unbind(dim=2)
     
     query_unpad, indices, cu_seqlens_q, max_seqlen_q, _ = unpad_input(

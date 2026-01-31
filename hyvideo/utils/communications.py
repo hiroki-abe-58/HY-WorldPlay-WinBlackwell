@@ -183,6 +183,9 @@ def all_to_all_4D(
     scatter_dim: int = 2,
     gather_dim: int = 1,
 ):
+    # Single GPU: return input as-is (no distributed communication)
+    if group is None or not dist.is_initialized():
+        return input_
     return SeqAllToAll4D.apply(group, input_, scatter_dim, gather_dim)
 
 
@@ -306,4 +309,7 @@ def all_gather(input_: torch.Tensor, dim: int = 1, group=None):
     Returns:
         torch.Tensor: Output tensor after all-gather operation, concatenated along 'dim'.
     """
+    # Single GPU: return input as-is (no distributed communication)
+    if group is None or not dist.is_initialized():
+        return input_
     return _AllGather.apply(input_, dim, group)

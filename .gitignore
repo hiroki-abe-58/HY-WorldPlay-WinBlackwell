@@ -168,3 +168,16 @@ ckpts/
 
 
 hyvideo/utils/rewrite/i2v_env.sh
+
+# Windows specific
+desktop.ini
+
+# Generated videos
+*.mp4
+
+# HuggingFace credentials
+.huggingface/
+huggingface_token.txt
+
+# Backup files
+*.bak

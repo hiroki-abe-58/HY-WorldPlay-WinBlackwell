@@ -17,8 +17,8 @@
 import os
 from dataclasses import dataclass
 
+import torch
 import torch.distributed as dist
-from torch.distributed.device_mesh import init_device_mesh
 
 
 @dataclass
@@ -36,36 +36,58 @@ class ParallelDims:
 
     def build_mesh(self, device_type):
         assert self.world_size % self.sp == 0, "world_size must be divisible by sp"
-        mesh = init_device_mesh(
-            device_type,
-            [self.world_size // self.sp, self.sp],
-            mesh_dim_names=["dp", "sp"],
-        )
-        self.world_mesh = mesh
-        return mesh
+        
+        # Windows/Single GPU compatibility: skip device mesh for single GPU
+        if self.world_size == 1:
+            self.world_mesh = None
+            return None
+        
+        # Multi-GPU: initialize device mesh
+        try:
+            from torch.distributed.device_mesh import init_device_mesh
+            mesh = init_device_mesh(
+                device_type,
+                [self.world_size // self.sp, self.sp],
+                mesh_dim_names=["dp", "sp"],
+            )
+            self.world_mesh = mesh
+            return mesh
+        except Exception as e:
+            # Fallback for Windows or non-distributed environments
+            print(f"Warning: Could not initialize device mesh: {e}")
+            self.world_mesh = None
+            return None
 
     @property
     def sp_enabled(self):
-        return self.sp > 1
+        return self.sp > 1 and self.world_mesh is not None
 
     @property
     def sp_group(self):
+        if self.world_mesh is None:
+            return None
         return self.world_mesh["sp"].get_group()
 
     @property
     def sp_mesh(self):
+        if self.world_mesh is None:
+            return None
         return self.world_mesh["sp"]
 
     @property
     def sp_rank(self):
+        if self.world_mesh is None:
+            return 0
         if self.sp_enabled:
             return self.world_mesh["sp"].get_local_rank()
         else:
-            return dist.get_rank()
+            if dist.is_initialized():
+                return dist.get_rank()
+            return 0
 
     @property
     def dp_enabled(self):
-        return self.sp > 1
+        return self.sp > 1 and self.world_mesh is not None
 
 
 __parallel_dims = None

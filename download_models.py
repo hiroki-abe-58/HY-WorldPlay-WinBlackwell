@@ -167,8 +167,11 @@ def download_byt5_encoders(hunyuan_path):
             shutil.rmtree(glyph_target)
 
         print("Downloading AI-ModelScope/Glyph-SDXL-v2 from ModelScope...")
+        # Use temp directory for Windows compatibility
+        import tempfile
+        cache_dir = os.path.join(tempfile.gettempdir(), "glyph_cache")
         glyph_cache = ms_snapshot_download(
-            "AI-ModelScope/Glyph-SDXL-v2", cache_dir="/tmp/glyph_cache"
+            "AI-ModelScope/Glyph-SDXL-v2", cache_dir=cache_dir
         )
 
         os.makedirs(glyph_target, exist_ok=True)

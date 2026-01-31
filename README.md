@@ -205,4 +205,4 @@ This project is licensed under the [Tencent Hunyuan Community License](https://g
 
 ## Japanese / 日本語
 
-詳細な日本語ドキュメントは [README_Windows.md](README_Windows.md) を参照してください。
+詳細な日本語ドキュメントは [README_ja.md](README_ja.md) を参照してください。

@@ -24,6 +24,118 @@ from loguru import logger
 # Check if models are available
 MODEL_BASE = os.environ.get("MODEL_BASE", os.path.join(os.path.dirname(__file__), "ckpts"))
 
+# Global Qwen2-VL model instance (lazy loading)
+_qwen_vl_model = None
+_qwen_vl_processor = None
+
+
+def get_qwen_vl_model():
+    """Get or create the Qwen2-VL model for image analysis."""
+    global _qwen_vl_model, _qwen_vl_processor
+    
+    if _qwen_vl_model is not None:
+        return _qwen_vl_model, _qwen_vl_processor
+    
+    logger.info("Loading Qwen2-VL model for image analysis...")
+    
+    from transformers import Qwen2VLForConditionalGeneration, AutoProcessor
+    
+    model_name = "Qwen/Qwen2-VL-7B-Instruct"
+    
+    _qwen_vl_model = Qwen2VLForConditionalGeneration.from_pretrained(
+        model_name,
+        torch_dtype=torch.bfloat16,
+        device_map="auto",
+        trust_remote_code=True,
+    )
+    
+    _qwen_vl_processor = AutoProcessor.from_pretrained(
+        model_name,
+        trust_remote_code=True,
+    )
+    
+    logger.info("Qwen2-VL model loaded successfully!")
+    
+    return _qwen_vl_model, _qwen_vl_processor
+
+
+def analyze_image_for_prompt(image_path, progress=gr.Progress()):
+    """Analyze an image and generate a descriptive prompt for video generation."""
+    
+    if image_path is None:
+        return "Please upload an image first."
+    
+    try:
+        progress(0.1, desc="Loading Qwen2-VL model...")
+        model, processor = get_qwen_vl_model()
+        
+        progress(0.3, desc="Processing image...")
+        
+        # Load and prepare the image
+        image = Image.open(image_path).convert("RGB")
+        
+        # Create the message for Qwen2-VL
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image", "image": image},
+                    {"type": "text", "text": "Describe this image in detail for a video generation prompt. Focus on: the scene, lighting, atmosphere, objects, colors, and any notable features. Write in English, in 2-3 sentences, suitable for an AI video generation model. Do not include any preamble, just output the description directly."},
+                ],
+            }
+        ]
+        
+        # Prepare inputs using the chat template
+        text = processor.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
+        )
+        
+        from qwen_vl_utils import process_vision_info
+        image_inputs, video_inputs = process_vision_info(messages)
+        
+        inputs = processor(
+            text=[text],
+            images=image_inputs,
+            videos=video_inputs,
+            padding=True,
+            return_tensors="pt",
+        )
+        inputs = inputs.to(model.device)
+        
+        progress(0.5, desc="Generating description...")
+        
+        # Generate the description
+        with torch.no_grad():
+            generated_ids = model.generate(
+                **inputs,
+                max_new_tokens=256,
+                do_sample=True,
+                temperature=0.7,
+                top_p=0.9,
+            )
+        
+        # Decode the output
+        generated_ids_trimmed = [
+            out_ids[len(in_ids):] 
+            for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
+        ]
+        output_text = processor.batch_decode(
+            generated_ids_trimmed,
+            skip_special_tokens=True,
+            clean_up_tokenization_spaces=False,
+        )[0]
+        
+        progress(1.0, desc="Done!")
+        
+        logger.info(f"Generated prompt: {output_text}")
+        return output_text.strip()
+        
+    except Exception as e:
+        import traceback
+        error_msg = f"Error analyzing image: {str(e)}"
+        logger.error(f"{error_msg}\n{traceback.format_exc()}")
+        return error_msg
+
 
 def check_environment():
     """Check if the environment is properly configured."""
@@ -258,6 +370,12 @@ def create_ui():
                     sources=["upload", "clipboard"],
                 )
                 
+                analyze_btn = gr.Button(
+                    "Analyze Image (Auto-generate Prompt)",
+                    variant="secondary",
+                    size="sm",
+                )
+                
                 prompt = gr.Textbox(
                     label="Prompt",
                     placeholder="Describe the scene...",
@@ -359,6 +477,12 @@ def create_ui():
         """)
         
         # Event handlers
+        analyze_btn.click(
+            fn=analyze_image_for_prompt,
+            inputs=[input_image],
+            outputs=[prompt],
+        )
+        
         generate_btn.click(
             fn=generate_video,
             inputs=[
